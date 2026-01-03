@@ -1,0 +1,50 @@
+version: '3.8'
+
+
+services:
+  redis:
+    image: redis:7.0.11-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+
+  django:
+    image: edushopx_project
+    container_name: edushopx_project
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app/
+      - /app/.venv
+      - shared:/shared
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.dev
+    depends_on:
+      - redis
+
+  celery:
+    container_name: celery
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: celery --app=config worker -l INFO -Q tasks -B
+    volumes:
+      - .:/app/
+      - shared:/shared
+    env_file:
+      - .env.dev
+    depends_on:
+      - redis
+      - django
+
+
+
+volumes:
+  shared:
