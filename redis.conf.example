@@ -1,0 +1,3 @@
+port 6379
+requirepass YOUR_REDIS_PASSWORD
+user redis_user on >YOUR_REDIS_PASSWORD ~* &* +@all

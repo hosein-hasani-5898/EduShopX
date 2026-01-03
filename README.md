@@ -47,10 +47,11 @@ git clone https://github.com/hosein-hasani-5898/EduShopX.git
 cd EduShopX
 ```
 
-### 2. Create environment variables
+### 2. Create environment variables and redis.conf
 
 Create a .env.dev file and set the required environment variables as per the .env.exaple file.
 
+cp redis.conf.example redis.conf and Set your Redis password in redis.conf before running Docker.
 
 ### 3. Build and run with Docker Compose
 ```bash

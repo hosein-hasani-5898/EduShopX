@@ -24,3 +24,4 @@ dump.rdb
 .idea/
 *.sublime-project
 *.sublime-workspace
+redis.conf
