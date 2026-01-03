@@ -22,14 +22,14 @@ real-time communication using **Django Channels**, and a fully containerized set
 ## Screenshots
 
 ### Swagger API Documentation
-![Swagger](screenshots/swagger1.png)
-![Swagger](screenshots/swagger2.png)
+![Swagger](screenshots/swagger1.PNG)
+![Swagger](screenshots/swagger2.PNG)
 
 ### Real-time Chat (Django Channels tested via Postman)
-![Postman WebSocket](screenshots/channels.png)
+![Postman WebSocket](screenshots/channels.PNG)
 
 ### Cashing (Redis)
-![Redis](screenshots/redis.png)
+![Redis](screenshots/redis.PNG)
 
 
 ---
