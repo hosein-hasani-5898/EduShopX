@@ -63,12 +63,8 @@ docker-compose up --build
 Migrations are applied automatically when the Django container starts.
 
 
-### 5. Access the application
-
-Django API: http://127.0.0.1:8000/api/
+### 5. Access the api
 
 Swagger Docs: http://127.0.0.1:8000/swagger/
-
-Admin Panel: http://127.0.0.1:8000/admin/
 
 All services (Django, Redis, Celery) will be up and running via Docker.
