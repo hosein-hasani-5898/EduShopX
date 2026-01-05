@@ -19,6 +19,7 @@ class BaseRegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     phone_number = serializers.CharField()
+    university = serializers.IntegerField()
 
     def validate_phone_number(self, value):
         """
@@ -37,6 +38,7 @@ class BaseRegisterSerializer(serializers.Serializer):
         username = attrs.get("username")
         email = attrs.get("email")
         phone_number = attrs.get("phone_number")
+        university = attrs.get("university")
 
         user = self.instance
 
@@ -53,6 +55,11 @@ class BaseRegisterSerializer(serializers.Serializer):
         if User.objects.filter(phone_number=phone_number).exclude(pk=user.pk if user else None).exists():
             raise serializers.ValidationError(
                 {"phone_number": "This phone number is already registered."}
+            )
+        
+        if not University.objects.filter(id=university).exists():
+            raise serializers.ValidationError(
+                {"university": "University not found."}
             )
 
         return attrs
@@ -81,14 +88,6 @@ class StudentRegisterSerializer(BaseRegisterSerializer):
     university = serializers.IntegerField()
     education_study = serializers.IntegerField()
 
-    def validate_university(self, value):
-        """
-        Ensure the university exists.
-        """
-        if not University.objects.filter(id=value).exists():
-            raise serializers.ValidationError("University not found.")
-        return value
-
     def validate_education_study(self, value):
         """
         Ensure the education study exists.
@@ -108,8 +107,6 @@ class StudentRegisterSerializer(BaseRegisterSerializer):
             id=validated_data["education_study"]
         )
 
-
-
         student = Student.objects.create(
             user=user,
             university=university,
@@ -127,15 +124,6 @@ class TeacherRegisterSerializer(BaseRegisterSerializer):
     """
     university = serializers.IntegerField()
 
-    def validate_university(self, value):
-        """
-        Ensure the university exists.
-        """
-        if not University.objects.filter(id=value).exists():
-            raise serializers.ValidationError("University not found.")
-        return value
-
-
     @transaction.atomic
     def create(self, validated_data):
         """
@@ -149,7 +137,7 @@ class TeacherRegisterSerializer(BaseRegisterSerializer):
         )
 
         teacher.full_clean()
-        teacher.save(update_fields=None)
+        teacher.save()
         teacher.university.add(university)
         return user
 

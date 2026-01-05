@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 @shared_task(
     queue='tasks',
     bind=True,
-    max_retries=3,
-    default_retry_delay=15,
+    max_retries=5,
+    default_retry_delay=10,
     time_limit=30
 )
 def send_email_task(

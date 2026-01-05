@@ -22,9 +22,18 @@ class User(AbstractUser):
         pattern = r"^(0)?9\d{9}$"
         if not re.match(pattern, self.phone_number):
             raise ValidationError({"phone_number": "The mobile number is not valid."})
+        
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username
+    
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"
 
 
 class CommonInfo(models.Model):
@@ -40,30 +49,29 @@ class CommonInfo(models.Model):
 
 
 class University(models.Model):
-    """
-    University model.
-    """
     name_uni = models.CharField(max_length=360)
     city = models.CharField(max_length=360)
 
     def __str__(self):
         return self.name_uni
+    
+    class Meta:
+        verbose_name = "University"
+        verbose_name_plural = "Universities"
 
 
 class EducationStudy(models.Model):
-    """
-    Educational field or study program.
-    """
     name_edu = models.CharField(max_length=360)
 
     def __str__(self):
         return self.name_edu
+    
+    class Meta:
+        verbose_name = "EducationStudy"
+        verbose_name_plural = "EducationStudies"
 
 
 class Student(CommonInfo):
-    """
-    Student profile linked to a user and university.
-    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     university = models.ForeignKey(University, on_delete=models.CASCADE)
     education_study = models.ForeignKey(EducationStudy, on_delete=models.CASCADE)
@@ -72,17 +80,20 @@ class Student(CommonInfo):
         constraints = [
             models.UniqueConstraint(fields=["user", "university"], name="unique_students_university")
         ]
+        verboser_name = "Student"
+        verboser_name_plural = "Students"
 
     def __str__(self):
         return self.user.get_full_name()
 
 
 class Teacher(CommonInfo):
-    """
-    Teacher profile linked to a user and multiple universities.
-    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     university = models.ManyToManyField(University)
 
     def __str__(self):
         return self.user.get_full_name()
+    
+    class Meta:
+        verbose_name = "Teacher"
+        verbose_name_plural = "Teachers"

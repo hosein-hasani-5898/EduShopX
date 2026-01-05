@@ -11,6 +11,10 @@ class ChatRoom(models.Model):
 
     def __str__(self):
         return f"Chat with {self.user.username}"
+    
+    class Meta:
+        verbose_name = "ChatRoom"
+        verbose_name_plural = "ChatRooms"
 
 
 class Message(models.Model):
@@ -25,4 +29,6 @@ class Message(models.Model):
     def __str__(self):
         return f"Message in room id: {self.room.id}"
 
-
+    class Meta:
+        verbose_name = "Message"
+        verbose_name_plural = "Messages"

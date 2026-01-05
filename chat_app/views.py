@@ -2,8 +2,6 @@ from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework import generics, permissions
-from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from chat_app.models import ChatRoom, Message
@@ -37,7 +35,7 @@ class ChatRoomUserListGenericView(generics.ListAPIView):
     """
     queryset = ChatRoom.objects.all()
     serializer_class = serializers.ChatRoomCreateUserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     @swagger_auto_schema(responses={200: serializers.ChatRoomCreateUserSerializer(many=True)})
     def get(self, request, *args, **kwargs):

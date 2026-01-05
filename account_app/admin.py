@@ -12,7 +12,7 @@ class UserAdmin(admin.ModelAdmin):
     exclude = ['last_login', 'groups']
     list_display = ['id' ,'username', 'role', 'email']
     exclude = ['role']
-    list_per_page =10
+    list_per_page =30
 
 
 @admin.display(boolean=True, ordering="name", description="new user")
@@ -129,7 +129,7 @@ class StudentAdmin(admin.ModelAdmin):
         'username', 'email', 'password', 'first_name', 'last_name',
         'phone_number', 'university', 'education_study'
     ]
-    list_per_page = 20
+    list_per_page = 30
     save_as = True
     show_full_result_count = True
 
