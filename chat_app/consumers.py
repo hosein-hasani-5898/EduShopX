@@ -29,16 +29,16 @@ class SupportChatConsumer(AsyncJsonWebsocketConsumer):
             await self.close()
             return
 
-        self.room_name = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group_name = f"chat_{self.room_name}"
+        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+        self.room_name = f"chat_{self.room_id}"
 
-        if not await user_can_join(self.room_name, user):
+        if not await user_can_join(self.room_id, user):
             await self.close()
             return
 
         try:
             await self.channel_layer.group_add(
-                self.room_group_name,
+                self.room_name,
                 self.channel_name
             )
             await self.accept()
@@ -50,10 +50,10 @@ class SupportChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Remove the user from the channel layer group when the connection closes.
         """
-        if hasattr(self, 'room_group_name') and hasattr(self, 'channel_name') and self.channel_layer:
+        if hasattr(self, 'room_name') and hasattr(self, 'channel_name') and self.channel_layer:
             try:
                 await self.channel_layer.group_discard(
-                    self.room_group_name,
+                    self.room_name,
                     self.channel_name
                 )
             except Exception:
@@ -84,7 +84,7 @@ class SupportChatConsumer(AsyncJsonWebsocketConsumer):
 
                 try:
                     await self.channel_layer.group_send(
-                        self.room_group_name,
+                        self.room_name,
                         {
                             "type": "chat.message",
                             "message": message_data,
@@ -121,9 +121,9 @@ class SupportChatConsumer(AsyncJsonWebsocketConsumer):
         user = self.scope["user"]
 
         if user.is_staff:
-            room = ChatRoom.objects.get(id=self.room_name, active=True)
+            room = ChatRoom.objects.get(id=self.room_id, active=True)
         else:
-            room = ChatRoom.objects.get(id=self.room_name, active=True, user=user)
+            room = ChatRoom.objects.get(id=self.room_id, active=True, user=user)
 
         msg = Message.objects.create(room=room, sender=user, content=text)
         return MessageUserCreateSerializer(msg).data
@@ -133,7 +133,7 @@ class SupportChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Deactivate the current chat room.
         """
-        room = ChatRoom.objects.get(id=self.room_name)
+        room = ChatRoom.objects.get(id=self.room_id)
         room.active = False
         room.save()
 

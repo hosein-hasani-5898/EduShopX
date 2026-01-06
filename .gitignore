@@ -25,3 +25,9 @@ dump.rdb
 *.sublime-project
 *.sublime-workspace
 redis.conf
+main/migrations/*.py
+!main/migrations/__init__.py
+account_app/migrations/*.py
+!account_app/migrations/__init__.py
+chat_app/migrations/*.py
+!chat_app/migrations/__init__.py

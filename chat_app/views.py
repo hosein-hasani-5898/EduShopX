@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from rest_framework import generics, permissions
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from chat_app.models import ChatRoom, Message
@@ -75,29 +75,31 @@ class MessageUserGenericView(generics.ListCreateAPIView):
     """
     List messages for a user's chat room or create a new message.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, ~permissions.IsAdminUser]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return serializers.MessageUserCreateSerializer
         return serializers.MessageUserListSerializer
+    
+    def get_room(self):
+        return get_object_or_404(ChatRoom, user=self.request.user)
 
     def get_queryset(self):
-        room_id = self.kwargs['room_pk']
-        user = self.request.user
-        return Message.objects.filter(room_id=room_id, room__user=user).select_related('sender')
+        room = self.get_room()
+        return Message.objects.filter(room=room).select_related('sender')
 
     def list(self, request, *args, **kwargs):
-        room_id = self.kwargs['room_pk']
         user = request.user
-        cache_key = f"messages:room:{room_id}:user:{user.id}"
+        room = self.get_room()
+
+        cache_key = f"messages:room:{room.id}:user:{user.id}"
         cached_data = cache.get(cache_key)
 
         if cached_data is not None:
             return Response(cached_data)
 
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(self.get_queryset(), many=True)
         data = serializer.data
 
         cache.set(cache_key, data, 120)
@@ -105,16 +107,12 @@ class MessageUserGenericView(generics.ListCreateAPIView):
 
     @swagger_auto_schema(responses={201: serializers.MessageUserListSerializer})
     def perform_create(self, serializer):
-        room_id = self.kwargs['room_pk']
         user = self.request.user
-        room = get_object_or_404(ChatRoom, id=room_id, user=user)
+        room = self.get_room()
 
-        if not user.is_staff and user != room.user:
-            raise PermissionDenied("You cannot send messages in this room.")
+        instance = serializer.save(room=room, sender=user)
 
-        instance = serializer.save(room_id=room_id, sender=user)
-
-        cache.delete(f"messages:room:{room_id}:user:{user.id}")
+        cache.delete(f"messages:room:{room.id}:user:{user.id}")
         cache.delete(f"chat:rooms:user:{user.id}")
 
         return instance
@@ -156,11 +154,7 @@ class MessageAdminGenericView(generics.ListCreateAPIView):
         room_id = self.kwargs['room_pk']
         room = get_object_or_404(ChatRoom, id=room_id)
         user = self.request.user
-        if not user.is_staff and user != room.user:
-            raise PermissionDenied("You cannot send messages in this room.")
-
         instance = serializer.save(room_id=room_id, sender=user)
-
         cache.delete(f"messages:room:{room_id}:user:{user.id}")
         cache.delete(f"chat:rooms:user:{user.id}")
 

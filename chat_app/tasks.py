@@ -5,7 +5,7 @@ from celery import shared_task
 
 
 app.conf.beat_schedule = {
-    'delete-old-chatrooms-every-6-hours': {
+    'delete-old-chatrooms-every-night': {
         'task': 'chat_app.tasks.delete_old_rooms',
         'schedule': crontab(minute='0', hour="0"),
     },

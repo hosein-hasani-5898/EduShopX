@@ -80,8 +80,8 @@ class Student(CommonInfo):
         constraints = [
             models.UniqueConstraint(fields=["user", "university"], name="unique_students_university")
         ]
-        verboser_name = "Student"
-        verboser_name_plural = "Students"
+        verbose_name = "Student"
+        verbose_name_plural = "Students"
 
     def __str__(self):
         return self.user.get_full_name()
