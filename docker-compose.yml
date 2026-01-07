@@ -12,7 +12,7 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
 
   django:
-    image: edushopx_project
+    # image: edushopx_project
     container_name: edushopx_project
     build:
       context: ./

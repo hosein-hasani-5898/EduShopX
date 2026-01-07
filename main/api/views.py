@@ -8,7 +8,7 @@ from main.models import (
 
 from account_app.models import User, Student, Teacher
 from main.api import serializers
-from rest_framework import generics, filters, permissions, status, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework_simplejwt.views import (
     TokenBlacklistView,
     TokenObtainPairView,
@@ -21,14 +21,14 @@ from main.api.custom_permissions import IsTeacherUser, IsTeacherUserVC
 from rest_framework.views import APIView
 from main.services import create_order_from_cart
 from django.shortcuts import get_object_or_404, redirect
-from django.db.models import Q, Count, Sum, F
+from django.db.models import Q, Count, Sum
 import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 import datetime
 from django.http import HttpResponse
-from main.tasks import click_plus_task, excel_task, avg_order_task, send_mass_email_task
+from main import tasks
 from celery.result import AsyncResult
 from django.contrib.admin.models import LogEntry
 from drf_yasg import openapi
@@ -66,7 +66,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         operation_summary="Create student (disabled)",
         operation_description=(
             "Student creation is disabled on this endpoint. "
-            "Use `/api/register/student/` instead."
+            "Use `/api/account/register/student/` instead."
         ),
         responses={405: "Method Not Allowed"}
     )
@@ -75,7 +75,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         Disable student creation via this endpoint.
         """
         return Response(
-            {"detail": "create account in address /api/register/student/"},
+            {"detail": "create account in address /api/account/register/student/"},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
@@ -86,41 +86,29 @@ class TeacherViewSet(viewsets.ModelViewSet):
     """
     Admin-only ViewSet for managing teachers.
 
-    Supports listing, searching, retrieving, updating, and deleting teachers.
+    Supports listing, retrieving, updating, and deleting teachers.
     Teacher creation is disabled and handled via a separate registration API.
     """
 
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
     serializer_class = serializers.TeacherSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['^name', '=staff_id']
+
 
     def get_queryset(self):
         """
         Return teachers with related user and university data.
-
-        Optional query parameters:
-        - name: Filter by teacher name
-        - staff_id: Filter by staff ID
         """
-        queryset = Teacher.objects.select_related(
+        return Teacher.objects.select_related(
             "user"
         ).prefetch_related(
             "university"
         )
-        name = self.request.query_params.get('name')
-        staff_id = self.request.query_params.get('staff_id')
-        if name:
-            queryset = queryset.filter(name=name)
-        if staff_id:
-            queryset = queryset.filter(staff_id=staff_id)
-        return queryset
     
     @swagger_auto_schema(
         operation_summary="Create teacher (disabled)",
         operation_description=(
             "Teacher creation is disabled on this endpoint. "
-            "Use `/api/register/teacher/` instead."
+            "Use `/api/account/register/teacher/` instead."
         ),
         responses={405: "Method Not Allowed"}
     )
@@ -129,7 +117,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
         Disable teacher creation via this endpoint.
         """
         return Response(
-            {"detail": "create account in address /api/register/teacher/"},
+            {"detail": "create account in address /api/account/register/teacher/"},
             status=status.HTTP_405_METHOD_NOT_ALLOWED
         )
 
@@ -152,11 +140,11 @@ class CourseTeacherUserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsTeacherUser]
 
     def get_queryset(self):
-        """
-        Return courses belonging to the authenticated teacher.
-        """
-        return Course.objects.filter(teacher__user=self.request.user)
-
+        return (
+            Course.objects
+            .filter(teacher__user=self.request.user)
+            .annotate(count_students=Count('users'))
+        )
 
     def get_serializer_class(self):
         """
@@ -165,14 +153,6 @@ class CourseTeacherUserViewSet(viewsets.ModelViewSet):
         if self.action in ["create", "update", "partial_update"]:
             return serializers.CoursesCreateUserSerializer
         return serializers.CoursesUserSerializer
-    
-    def get_serializer_context(self):
-        """
-        Add request object to serializer context.
-        """
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
 
     def perform_create(self, serializer):
         """
@@ -1165,7 +1145,7 @@ class AverageOrderValueAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     def get(self, request):
-        task = avg_order_task.apply_async()
+        task = tasks.avg_order_task.apply_async()
         return Response({"task_id": task.id})
 
 
@@ -1176,7 +1156,7 @@ class AvgOrderResultAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     def get(self, request, task_id):
-        result = avg_order_task.AsyncResult(task_id)
+        result = tasks.avg_order_task.AsyncResult(task_id)
 
         if not result.ready():
             return Response({"status": result.status})
@@ -1192,7 +1172,7 @@ class HighSpenderEmailsExcelAPIView(APIView):
 
     def get(self, request):
         threshold = float(request.query_params.get("threshold", 100000))
-        task = excel_task.apply_async(args=[threshold])
+        task = tasks.excel_task.apply_async(args=[threshold])
         return Response({"task_id": task.id})
 
 
@@ -1203,7 +1183,7 @@ class DownloadHighSpendersExcel(APIView):
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     def get(self, request, task_id):
-        result = excel_task.AsyncResult(task_id)
+        result = tasks.excel_task.AsyncResult(task_id)
 
         if not result.ready():
             return Response({"status": result.status})
@@ -1309,7 +1289,7 @@ def shortlink_redirect(request, code):
     Redirect user to target object URL and increment click count asynchronously.
     """
     link = get_object_or_404(ShortLink, code=code)
-    click_plus_task.apply_async(args=[link.id])
+    tasks.click_plus_task.apply_async(args=[link.id])
     return redirect(link.target_object.get_absolute_url())
 
 
@@ -1352,7 +1332,7 @@ class SendMassEmailAPIView(APIView):
                 status=400
             )
 
-        task = send_mass_email_task.apply_async(args=[subject, message])
+        task = tasks.send_mass_email_task.apply_async(args=[subject, message])
         return Response({"task_id": task.id})
 
 

@@ -6,6 +6,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from config import settings
 import uuid
+from main.utils.validators import validate_video_size
+from django.conf import settings
+from config.settings.base_settings import VIDEO_COURSE_MAX_MB, VIDEO_ARTICLE_MAX_MB
+
 
 class CommonInfo(models.Model):
     """
@@ -16,15 +20,6 @@ class CommonInfo(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-
-
-def validate_video_course_size(value):
-    """
-    Validator to ensure uploaded video file for course is less than 500 MB.
-    """
-    limit = 500 * 1024 * 1024
-    if value.size > limit:
-        raise ValidationError('The video size must be less than 500 MB.')
 
 
 class Course(models.Model):
@@ -48,6 +43,10 @@ class Course(models.Model):
         if not self.is_free and self.price == 0:
             raise ValidationError("This course is free")
         
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     @property
     def short_code(self):
         """
@@ -79,7 +78,7 @@ class VideoCourse(models.Model):
         upload_to='media/video/course/',
         validators=[
             FileExtensionValidator(allowed_extensions=['mp4']),
-            validate_video_course_size
+            validate_video_size(VIDEO_COURSE_MAX_MB)
         ]
     )
     description = models.CharField(max_length=360)
@@ -109,15 +108,6 @@ class PublishedManager(models.Manager):
         return super().get_queryset().filter(is_published=True)
 
 
-def validate_video_size(value):
-    """
-    Validator to ensure uploaded video file for article is less than 50 MB.
-    """
-    limit = 50 * 1024 * 1024
-    if value.size > limit:
-        raise ValidationError('The video size must be less than 50 MB.')
-
-
 class Article(CommonInfo):
     """
     Model representing an article created by a user.
@@ -128,7 +118,7 @@ class Article(CommonInfo):
         upload_to='media/video/article/',
         validators=[
             FileExtensionValidator(allowed_extensions=['mp4']),
-            validate_video_size
+            validate_video_size(VIDEO_ARTICLE_MAX_MB)
         ],
         blank=True, null=True
     )
@@ -194,7 +184,6 @@ class Book(models.Model):
         ordering = ["name"]
         verbose_name = "Book"
         verbose_name_plural = "Books"
-        db_table = "store_Book"
 
     def __str__(self):
         return self.name

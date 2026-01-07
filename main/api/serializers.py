@@ -47,10 +47,11 @@ class UserSetSerializer(serializers.ModelSerializer):
         first_name (str): First name.
         last_name (str): Last name.
         email (str): Email address.
+        phone_number (str): phone number.
     """
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'phone_number']
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -107,19 +108,9 @@ class CoursesCreateUserSerializer(serializers.ModelSerializer):
         price (int): Price of the course (default 0).
         videos (list of int): List of VideoCourse IDs (optional).
     """
-    name = serializers.CharField(required=True)
-    description_course = serializers.CharField(required=True)
-    is_free = serializers.BooleanField(required=False, default=True)
-    price = serializers.IntegerField(required=False, default=0)
-    videos = serializers.PrimaryKeyRelatedField(
-        queryset=VideoCourse.objects.all(),
-        required=False,
-        allow_null=True
-    )
-
     class Meta:
         model = Course
-        fields = ['name', 'description_course', 'is_free', 'price', 'videos']
+        fields = ['name', 'description_course', 'is_free', 'price']
 
     def validate_name(self, value):
         """
@@ -134,14 +125,18 @@ class CoursesCreateUserSerializer(serializers.ModelSerializer):
         except Teacher.DoesNotExist:
             raise serializers.ValidationError("Teacher not found.")
 
-        if self.instance and self.instance.pk:
-            if Course.objects.filter(name=value, teacher=teacher).exclude(pk=self.instance.pk).exists():
-                raise serializers.ValidationError("This course name has already been taken for this instructor.")
-        else:
-            if Course.objects.filter(name=value, teacher=teacher).exists():
-                raise serializers.ValidationError("This course name has already been taken for this instructor.")
+        qs = Course.objects.filter(name=value, teacher=teacher)
+
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        if qs.exists():
+            raise serializers.ValidationError(
+                "This course name has already been taken for this instructor."
+            )
 
         return value
+
 
 
 class CoursesCreateAdminSerializer(serializers.ModelSerializer):
@@ -267,7 +262,7 @@ class UserEnrollmentSerializer(serializers.ModelSerializer):
     """Serializer for basic user information in enrollment."""
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'phone_number']
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):

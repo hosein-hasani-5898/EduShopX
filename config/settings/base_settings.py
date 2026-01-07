@@ -154,3 +154,7 @@ CACHES = {
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
 
+# ========== Max size video for models ==========
+
+VIDEO_COURSE_MAX_MB = 500
+VIDEO_ARTICLE_MAX_MB = 50
